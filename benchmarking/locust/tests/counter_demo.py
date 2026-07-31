@@ -64,7 +64,7 @@ class CounterUser(User):
     # separate attribute so it's not clobbered when host points elsewhere
     # (e.g. when running with other user classes via --class-picker).
     host = "api.ate-system.svc.cluster.local:443"
-    api_host = "api.ate-system.svc.cluster.local:443"
+    api_host = os.environ.get("ATE_API_HOST", "api.ate-system.svc.cluster.local:443")
 
     def on_start(self) -> None:
         update_user_count(1, self.__class__.__name__)
