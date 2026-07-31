@@ -23,6 +23,7 @@ Both files are projected in by the Deployment
 (benchmarking/locust/manifests/locust.yaml).
 """
 
+import os
 import re
 
 import grpc
@@ -63,7 +64,8 @@ def _split_cred_bundle(bundle: bytes):
 
 
 def ateapi_channel(host: str, options=None) -> grpc.Channel:
-    """Open an mTLS channel to ateapi that authenticates as this pod.
+    """Open an mTLS channel to ateapi that authenticates as this pod,
+    or falls back to ATE_API_BEARER_TOKEN when pod credentials are not mounted.
 
     The certificate is read once, when the channel is built. Python's gRPC
     has no per-handshake reload hook, unlike the Go client's
@@ -73,6 +75,17 @@ def ateapi_channel(host: str, options=None) -> grpc.Channel:
     old one expiring.
     """
     target = host.replace("http://", "").replace("https://", "")
+    channel_options = [("grpc.ssl_target_name_override", SERVER_NAME)]
+    if options:
+        channel_options.extend(options)
+
+    if not os.path.exists(CA_FILE) and os.environ.get("ATE_API_BEARER_TOKEN"):
+        token = os.environ["ATE_API_BEARER_TOKEN"]
+        token_creds = grpc.access_token_call_credentials(token)
+        ssl_creds = grpc.ssl_channel_credentials()
+        creds = grpc.composite_channel_credentials(ssl_creds, token_creds)
+        return grpc.secure_channel(target, creds, options=channel_options)
+
     with open(CA_FILE, "rb") as f:
         ca_cert = f.read()
     with open(CRED_BUNDLE, "rb") as f:
@@ -83,7 +96,4 @@ def ateapi_channel(host: str, options=None) -> grpc.Channel:
         private_key=private_key,
         certificate_chain=cert_chain,
     )
-    channel_options = [("grpc.ssl_target_name_override", SERVER_NAME)]
-    if options:
-        channel_options.extend(options)
     return grpc.secure_channel(target, creds, options=channel_options)
