@@ -82,7 +82,12 @@ def ateapi_channel(host: str, options=None) -> grpc.Channel:
     if not os.path.exists(CA_FILE) and os.environ.get("ATE_API_BEARER_TOKEN"):
         token = os.environ["ATE_API_BEARER_TOKEN"]
         token_creds = grpc.access_token_call_credentials(token)
-        ssl_creds = grpc.ssl_channel_credentials()
+        ca_path = os.environ.get("ATE_API_CA_BUNDLE")
+        root_certs = None
+        if ca_path and os.path.exists(ca_path):
+            with open(ca_path, "rb") as f:
+                root_certs = f.read()
+        ssl_creds = grpc.ssl_channel_credentials(root_certificates=root_certs)
         creds = grpc.composite_channel_credentials(ssl_creds, token_creds)
         return grpc.secure_channel(target, creds, options=channel_options)
 
