@@ -51,7 +51,8 @@ tracer = get_tracer(__name__)
 # Atenet router fronts all actor traffic. Actors are addressed by setting
 # the HTTP Host header to <actor-name>.<atespace>.actors.resources.substrate.ate.dev;
 # the router resolves that to the actor's current worker pod.
-ROUTER_URL = "http://atenet-router.ate-system.svc.cluster.local"
+import os
+ROUTER_URL = os.environ.get("ATENET_ROUTER_URL", "http://atenet-router.ate-system.svc.cluster.local")
 ACTOR_DOMAIN = "actors.resources.substrate.ate.dev"
 
 
