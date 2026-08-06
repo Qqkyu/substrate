@@ -284,6 +284,15 @@ def wait_for_job(name: str, timeout_seconds: int) -> str:
     return "timeout"
 
 
+def dump_diagnostics() -> None:
+    print("\n=== DIAGNOSTICS ===", flush=True)
+    run_no_check(["kubectl", "get", "pods", "-A"])
+    run_no_check(["kubectl", "get", "actortemplates", "-n", "benchmark-workloads", "-o", "yaml"])
+    run_no_check(["kubectl", "logs", "-n", "ate-system", "deployment/ate-controller", "--all-containers", "--tail=200"])
+    run_no_check(["kubectl", "logs", "-n", "ate-system", "deployment/ate-api-server", "--all-containers", "--tail=200"])
+    print("=== END DIAGNOSTICS ===\n", flush=True)
+
+
 def deploy_substrate() -> None:
     run(["hack/install-ate.sh", "--deploy-ate-system"])
 
@@ -438,8 +447,10 @@ def main() -> None:
                     )
                 except Exception as e:
                     print(f"Test {test['name']} crashed: {e}", flush=True)
+                    dump_diagnostics()
             except Exception as e:
                 print(f"Test {test['name']} setup failed: {e}", flush=True)
+                dump_diagnostics()
             finally:
                 # Always tear down, even if deploy or run failed, so the
                 # next test (and the next CronJob fire) starts clean.
